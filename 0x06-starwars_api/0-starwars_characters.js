@@ -1,23 +1,33 @@
 #!/usr/bin/node
-const axios = require('axios');
 
-const API_URL = 'https://swapi.dev/api';
+const request = require('request');
 
-if (process.argv.length > 2) {
-  axios.get(`${API_URL}/films/${process.argv[2]}/`)
-    .then(response => {
-      const charactersURL = response.data.characters;
-      const charactersName = charactersURL.map(url =>
-        axios.get(url)
-          .then(response => response.data.name)
-          .catch(error => Promise.reject(error))
-      );
+// Function to retrieve characters based on movie ID
+function getMovieCharacters(movieId) {
+  const apiUrl = `https://swapi.dev/api/films/${movieId}/`;
 
-      Promise.all(charactersName)
-        .then(names => console.log(names.join('\n')))
-        .catch(error => console.log(error));
-    })
-    .catch(error => {
-      console.log(error);
-    });
+  request(apiUrl, function (error, response, body) {
+    if (!error && response.statusCode === 200) {
+      const movieData = JSON.parse(body);
+      const characters = movieData.characters;
+
+      // Iterate over characters and print their names
+      characters.forEach(function (characterUrl) {
+        request(characterUrl, function (error, response, body) {
+          if (!error && response.statusCode === 200) {
+            const characterData = JSON.parse(body);
+            console.log(characterData.name);
+          } else {
+            console.log('Error retrieving character data:', error);
+          }
+        });
+      });
+    } else {
+      console.log('Error retrieving movie data:', error);
+    }
+  });
 }
+
+// Retrieve characters for a specific movie ID
+const movieId = process.argv[2];
+getMovieCharacters(movieId);
